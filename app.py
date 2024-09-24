@@ -48,7 +48,7 @@ def login_user():
     if not user:
         return jsonify({'error': 'Invalid username or password'}), 401
 
-    # Verify the password
+    # Verify password
     hashed_password = hash_password(password)
     if user['password'] == hashed_password:
         return jsonify({'message': 'Login successful'}), 200
