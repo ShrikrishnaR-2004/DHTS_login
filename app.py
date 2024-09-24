@@ -1,65 +1,59 @@
 from flask import Flask, request, jsonify
-from flask_pymongo import PyMongo
-from werkzeug.security import generate_password_hash, check_password_hash
-from bson import ObjectId
+from pymongo import MongoClient
 import bcrypt
+import hashlib
 
 app = Flask(__name__)
 
-# MongoDB Config
-app.config["MONGO_URI"] = "mongodb://localhost:27017/DHTS_Login"
-mongo = PyMongo(app)
-users_collection = mongo.db.users  # Collection to store user data
+# MongoDB setup
+client = MongoClient('mongodb://localhost:27017/')
+db = client['DHTS_Login']
+users_collection = db['Login']
 
-# Helper function to hash the password
+# SHA-256
 def hash_password(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    return hashlib.sha256(password.encode()).hexdigest()
 
-# Helper function to verify hashed password
-def verify_password(hashed_password, password):
-    return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
-
-# Internal registration endpoint (only admin or system can use this)
-@app.route('/register', methods=['POST'])
+# Registration
+@app.route('/internal/register', methods=['POST'])
 def register_user():
-    if request.json:  # Ensure request body contains JSON
-        username = request.json.get('username')
-        password = request.json.get('password')
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
 
-        # Check if user already exists
-        existing_user = users_collection.find_one({"username": username})
-        if existing_user:
-            return jsonify({"message": "User already exists!"}), 400
+    # Check if the user already exists
+    if users_collection.find_one({'username': username}):
+        return jsonify({'error': 'User already exists'}), 400
 
-        # Hash the password and store in the database
-        hashed_password = hash_password(password)
+    # Hash the password
+    hashed_password = hash_password(password)
 
-        # Insert user into MongoDB
-        user_id = users_collection.insert_one({
-            "username": username,
-            "password": hashed_password
-        }).inserted_id
+    # Insert user data into MongoDB
+    users_collection.insert_one({
+        'username': username,
+        'password': hashed_password
+    })
 
-        return jsonify({"message": "User created!", "user_id": str(user_id)}), 201
+    return jsonify({'message': 'User registered successfully'}), 201
 
-    return jsonify({"message": "Invalid input!"}), 400
+# Login
+@app.route('/api/login', methods=['POST'])
+def login_user():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
 
-# Login endpoint
-@app.route('/login', methods=['POST'])
-def login():
-    if request.json:
-        username = request.json.get('username')
-        password = request.json.get('password')
+    # Retrieve data
+    user = users_collection.find_one({'username': username})
+    if not user:
+        return jsonify({'error': 'Invalid username or password'}), 401
 
-        # Fetch user from database
-        user = users_collection.find_one({"username": username})
-
-        if user and verify_password(user['password'], password):
-            return jsonify({"message": "Login successful!"}), 200
-        else:
-            return jsonify({"message": "Invalid username or password!"}), 401
-
-    return jsonify({"message": "Invalid input!"}), 400
+    # Verify the password
+    hashed_password = hash_password(password)
+    if user['password'] == hashed_password:
+        return jsonify({'message': 'Login successful'}), 200
+    else:
+        return jsonify({'error': 'Invalid username or password'}), 401
 
 if __name__ == '__main__':
     app.run(debug=True)
