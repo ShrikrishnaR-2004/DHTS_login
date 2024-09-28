@@ -10,7 +10,7 @@ client = MongoClient('mongodb://localhost:27017/')
 db = client['DHTS_Login']
 users_collection = db['Login']
 
-# SHA-256
+# SHA-256 for password
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
