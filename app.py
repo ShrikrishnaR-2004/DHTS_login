@@ -77,9 +77,9 @@ def verifier(password: str, hash_string: str) -> bool:
 
 # Routes
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
+    form = LoginForm()  # Create the form object
     if form.validate_on_submit():
         user = users.find_one({'username': form.username.data})
         if user and verifier(form.password.data, user['password']):
@@ -88,7 +88,8 @@ def login():
             return redirect(url_for('dashboard'))
         else:
             flash('Login failed. Check your credentials.', 'danger')
-    return render_template('index.html', form=form)
+    return render_template('login.html', form=form)
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
