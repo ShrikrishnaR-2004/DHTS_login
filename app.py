@@ -71,8 +71,8 @@ def encrypt(password: str) -> str:
 def verifier(password: str, hash_string: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hash_string.encode('utf-8'))
 
-# Routes
 
+@app.route('/', methods=['GET', 'POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -107,14 +107,16 @@ def register():
 @app.route('/dashboard')
 def dashboard():
     if 'username' in session:
-        return f'Welcome {session["username"]} to your dashboard!'
-    return redirect(url_for('login'))
+        return render_template('dashboard.html', username=session['username'])
+    else:
+        return redirect(url_for('login'))
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def logout():
     session.pop('username', None)
     flash('You have been logged out.', 'success')
     return redirect(url_for('login'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
