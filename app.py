@@ -9,12 +9,10 @@ import string
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# MongoDB Connection
 client = MongoClient("mongodb://localhost:27017/")
-db = client.flask_login_db
-users = db.users
+db = client.dhtslogin
+users = db.login
 
-# Flask-WTF Form Class
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=2, max=20)])
     password = PasswordField('Password', validators=[DataRequired()])
@@ -25,7 +23,6 @@ class RegisterForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Register')
 
-# Custom password encryption function
 def encrypt(password: str) -> str:
     try:
         if len(password) < 8 or len(password) > 73:
@@ -71,7 +68,6 @@ def encrypt(password: str) -> str:
         print("Password must not contain white space characters")
         return ""
 
-# Custom password verification function
 def verifier(password: str, hash_string: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hash_string.encode('utf-8'))
 
@@ -79,7 +75,7 @@ def verifier(password: str, hash_string: str) -> bool:
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()  # Create the form object
+    form = LoginForm()
     if form.validate_on_submit():
         user = users.find_one({'username': form.username.data})
         if user and verifier(form.password.data, user['password']):
